@@ -30,11 +30,17 @@ export function getSupabaseEnv() {
   // 4. Strip any trailing slashes from the URL
   url = url.replace(/\/+$/, '')
 
-  // Final fallback check to guarantee url is never an empty string
-  if (!url) {
+  // 5. CRITICAL GUARANTEE: Verify that url is a valid URL before Supabase sees it.
+  // If whatever is in Vercel settings fails URL parsing, discard it and use the valid FALLBACK_URL.
+  try {
+    new URL(url)
+  } catch {
+    console.error(`Malformed Supabase URL detected in environment ("${url}"). Discarding and using valid fallback URL!`)
     url = FALLBACK_URL
   }
-  if (!key) {
+
+  if (!key || key.length < 20) {
+    console.error('Malformed or missing Supabase Key in environment. Discarding and using valid fallback key!')
     key = FALLBACK_KEY
   }
 

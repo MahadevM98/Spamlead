@@ -6,8 +6,9 @@ export async function updateSession(request: NextRequest) {
     request,
   })
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  // Auto-clean any accidental spaces, newlines, or quotation marks from Vercel dashboard pasting
+  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/^["']|["']$/g, '')
+  const supabaseKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim().replace(/^["']|["']$/g, '')
 
   if (!supabaseUrl || !supabaseKey) {
     console.error('Missing Supabase Environment Variables in Next.js Middleware!')
@@ -63,7 +64,6 @@ export async function updateSession(request: NextRequest) {
     }
   } catch (err) {
     console.error('Unhandled exception in Supabase Edge Middleware:', err)
-    // Return the response as-is so the app renders instead of throwing a 500 Vercel error
     return supabaseResponse
   }
 

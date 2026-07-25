@@ -6,6 +6,9 @@ import Link from 'next/link'
 import PromptForm from './prompt-form'
 import LeadTable from './lead-table'
 
+// Force dynamic rendering so Next.js never attempts static prerendering without cookies at build time
+export const dynamic = 'force-dynamic'
+
 interface AIInteraction {
   id: string
   user_id: string
@@ -27,6 +30,10 @@ export default async function DashboardPage() {
       user = data?.user
     }
   } catch (err: any) {
+    // Rethrow Next.js internal control-flow exceptions
+    if (err?.digest === 'DYNAMIC_SERVER_USAGE' || err?.digest?.startsWith('NEXT_') || err?.message?.includes('DYNAMIC_SERVER_USAGE') || err?.message?.includes('NEXT_REDIRECT')) {
+      throw err
+    }
     console.error('Unhandled exception calling getUser() in dashboard:', err)
     authErrorMsg = err.message || 'Failed to authenticate user session on server.'
   }
@@ -53,6 +60,9 @@ export default async function DashboardPage() {
       interactions = data as AIInteraction[]
     }
   } catch (err: any) {
+    if (err?.digest === 'DYNAMIC_SERVER_USAGE' || err?.digest?.startsWith('NEXT_') || err?.message?.includes('DYNAMIC_SERVER_USAGE') || err?.message?.includes('NEXT_REDIRECT')) {
+      throw err
+    }
     console.error('Unhandled exception fetching ai_interactions:', err)
     fetchErrorMsg = err.message || 'An unexpected error occurred while fetching database records.'
   }

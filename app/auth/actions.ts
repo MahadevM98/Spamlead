@@ -24,6 +24,9 @@ export async function login(formData: FormData) {
       return { error: error.message }
     }
   } catch (err: any) {
+    if (err?.digest?.startsWith('NEXT_') || err?.message?.includes('NEXT_REDIRECT')) {
+      throw err
+    }
     console.error('Unhandled exception in login action:', err)
     return { error: err.message || 'An unexpected error occurred during login.' }
   }
@@ -53,6 +56,9 @@ export async function signup(formData: FormData) {
       return { error: error.message }
     }
   } catch (err: any) {
+    if (err?.digest?.startsWith('NEXT_') || err?.message?.includes('NEXT_REDIRECT')) {
+      throw err
+    }
     console.error('Unhandled exception in signup action:', err)
     return { error: err.message || 'An unexpected error occurred during sign up.' }
   }
@@ -66,7 +72,10 @@ export async function signout() {
   try {
     const supabase = await createClient()
     await supabase.auth.signOut()
-  } catch (err) {
+  } catch (err: any) {
+    if (err?.digest?.startsWith('NEXT_') || err?.message?.includes('NEXT_REDIRECT')) {
+      throw err
+    }
     console.error('Unhandled exception in signout action:', err)
   }
 

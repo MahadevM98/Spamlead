@@ -21,8 +21,8 @@ export async function generateAIResponse(prompt: string) {
   }
 
   try {
-    // Auto-clean any accidental spaces, newlines, or quotation marks from Vercel dashboard pasting
-    const apiKey = (process.env.GEMINI_API_KEY || '').trim().replace(/^["']|["']$/g, '')
+    // Strip ALL whitespace, newlines, and quotes from API key to fix copy-paste word wrapping
+    const apiKey = (process.env.GEMINI_API_KEY || '').replace(/\s+/g, '').replace(/^["']|["']$/g, '')
 
     // 2. Initialize the @google/genai client
     const ai = new GoogleGenAI({ apiKey })

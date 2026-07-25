@@ -22,7 +22,17 @@ export async function generateAIResponse(prompt: string) {
 
   try {
     // Strip ALL whitespace, newlines, and quotes from API key to fix copy-paste word wrapping
-    const apiKey = (process.env.GEMINI_API_KEY || '').replace(/\s+/g, '').replace(/^["']|["']$/g, '')
+    let apiKey = (process.env.GEMINI_API_KEY || '').replace(/\s+/g, '').replace(/^["']|["']$/g, '')
+    if (apiKey.includes('=')) {
+      apiKey = apiKey.split('=').pop() || apiKey
+    }
+
+    if (!apiKey || apiKey.length < 20) {
+      return {
+        error:
+          'Configuration Error: GEMINI_API_KEY is missing or empty in Vercel! Please go to your Vercel Dashboard -> Settings -> Environment Variables, and ensure GEMINI_API_KEY is added with the Production checkbox checked, then redeploy.',
+      }
+    }
 
     // 2. Initialize the @google/genai client
     const ai = new GoogleGenAI({ apiKey })
@@ -53,6 +63,13 @@ export async function generateAIResponse(prompt: string) {
     return { response: responseText }
   } catch (err: any) {
     console.error('Error in generateAIResponse:', err)
-    return { error: err.message || 'An error occurred while communicating with Google Gemini.' }
+    const msg = err.message || 'An error occurred while communicating with Google Gemini.'
+    if (msg.toLowerCase().includes('api key') || msg.includes('400') || msg.includes('403')) {
+      return {
+        error:
+          'Google Gemini rejected your API Key (Invalid API key). Please check your Vercel Dashboard -> Settings -> Environment Variables and ensure GEMINI_API_KEY is pasted correctly without quotes or typos, then redeploy.',
+      }
+    }
+    return { error: msg }
   }
 }

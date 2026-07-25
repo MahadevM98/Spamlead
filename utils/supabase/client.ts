@@ -1,8 +1,7 @@
 import { createBrowserClient } from '@supabase/ssr'
-
-const cleanUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/^["']|["']$/g, '')
-const cleanKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim().replace(/^["']|["']$/g, '')
+import { getSupabaseEnv } from './env'
 
 export function createClient() {
-  return createBrowserClient(cleanUrl, cleanKey)
+  const { url, key } = getSupabaseEnv()
+  return createBrowserClient(url, key)
 }

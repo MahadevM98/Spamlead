@@ -1,14 +1,13 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { getSupabaseEnv } from './env'
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   })
 
-  // Auto-clean any accidental spaces, newlines, or quotation marks from Vercel dashboard pasting
-  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim().replace(/^["']|["']$/g, '')
-  const supabaseKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '').trim().replace(/^["']|["']$/g, '')
+  const { url: supabaseUrl, key: supabaseKey } = getSupabaseEnv()
 
   if (!supabaseUrl || !supabaseKey) {
     console.error('Missing Supabase Environment Variables in Next.js Middleware!')

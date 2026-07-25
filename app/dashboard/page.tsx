@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import { signout } from '@/app/auth/actions'
-import { ShieldCheck, LogOut, Sparkles, User, ShieldAlert, CheckCircle2, TrendingUp, RefreshCw, MessageSquare, Terminal, Bot } from 'lucide-react'
+import { ShieldCheck, LogOut, Sparkles, User, ShieldAlert, CheckCircle2, TrendingUp, RefreshCw, MessageSquare, Terminal, Bot, AlertCircle } from 'lucide-react'
 import Link from 'next/link'
 import PromptForm from './prompt-form'
 import LeadTable from './lead-table'
@@ -15,23 +15,47 @@ interface AIInteraction {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient()
+  let user = null
+  let authErrorMsg = null
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    const supabase = await createClient()
+    const { data, error } = await supabase.auth.getUser()
+    if (error) {
+      authErrorMsg = error.message
+    } else {
+      user = data?.user
+    }
+  } catch (err: any) {
+    console.error('Unhandled exception calling getUser() in dashboard:', err)
+    authErrorMsg = err.message || 'Failed to authenticate user session on server.'
+  }
 
+  // Redirect must be called outside try/catch blocks in Next.js App Router
   if (!user) {
     redirect('/login')
   }
 
-  // Fetch logged-in user's past interactions from Supabase, ordered by created_at descending
-  const { data: interactions, error: fetchError } = await supabase
-    .from('ai_interactions')
-    .select('*')
-    .order('created_at', { ascending: false })
+  // Fetch logged-in user's past interactions from Supabase
+  let interactions: AIInteraction[] = []
+  let fetchErrorMsg: string | null = null
 
-  const typedInteractions = (interactions || []) as AIInteraction[]
+  try {
+    const supabase = await createClient()
+    const { data, error: dbError } = await supabase
+      .from('ai_interactions')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (dbError) {
+      fetchErrorMsg = dbError.message
+    } else if (data) {
+      interactions = data as AIInteraction[]
+    }
+  } catch (err: any) {
+    console.error('Unhandled exception fetching ai_interactions:', err)
+    fetchErrorMsg = err.message || 'An unexpected error occurred while fetching database records.'
+  }
 
   return (
     <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col relative overflow-hidden font-sans">
@@ -136,7 +160,7 @@ export default async function DashboardPage() {
               <Sparkles className="w-4 h-4 text-violet-400" />
             </div>
             <div className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-violet-400">
-              {typedInteractions.length}
+              {interactions.length}
             </div>
             <div className="text-[11px] text-slate-400 mt-2">
               <span>Stored in ai_interactions</span>
@@ -155,17 +179,20 @@ export default async function DashboardPage() {
               <h3 className="font-bold text-lg text-white">Your AI Interaction History</h3>
             </div>
             <span className="text-xs font-mono px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400">
-              {typedInteractions.length} {typedInteractions.length === 1 ? 'record' : 'records'} found in Supabase
+              {interactions.length} {interactions.length === 1 ? 'record' : 'records'} found in Supabase
             </span>
           </div>
 
-          {fetchError && (
-            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs">
-              <strong>Error fetching database interactions:</strong> {fetchError.message}
+          {fetchErrorMsg && (
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 text-amber-300 text-xs">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 text-amber-400" />
+              <div>
+                <strong>Notice:</strong> Unable to load database interactions ({fetchErrorMsg}). Verify that your Supabase table and environment variables are configured in Vercel.
+              </div>
             </div>
           )}
 
-          {typedInteractions.length === 0 ? (
+          {interactions.length === 0 ? (
             <div className="glass-card rounded-2xl p-12 text-center border border-slate-800/80 space-y-3">
               <div className="w-12 h-12 rounded-full bg-slate-800/60 border border-slate-700/60 flex items-center justify-center mx-auto text-slate-500">
                 <Bot className="w-6 h-6" />
@@ -177,7 +204,7 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {typedInteractions.map((item) => (
+              {interactions.map((item) => (
                 <div
                   key={item.id}
                   className="glass-card rounded-xl border border-slate-800/80 p-5 flex flex-col justify-between space-y-4 hover:border-slate-700 transition-all group"
@@ -190,7 +217,7 @@ export default async function DashboardPage() {
                         Prompt
                       </span>
                       <span className="font-mono text-[10px] text-slate-500">
-                        {new Date(item.created_at).toLocaleString()}
+                        {item.created_at ? new Date(item.created_at).toLocaleString() : 'Recent'}
                       </span>
                     </div>
                     <p className="text-sm text-slate-200 bg-slate-900/60 p-3 rounded-lg border border-slate-800/80 font-sans leading-relaxed line-clamp-4 group-hover:line-clamp-none transition-all">
